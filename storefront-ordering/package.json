@@ -1,0 +1,12 @@
+{
+  "name": "revizionedit-custom-storefront",
+  "private": true,
+  "version": "1.0.0",
+  "engines": {
+    "node": "24.x"
+  },
+  "scripts": {
+    "start": "node --env-file-if-exists=.env server.cjs",
+    "test": "node --test test/*.test.cjs"
+  }
+}
