@@ -9,7 +9,7 @@ const db=new DatabaseSync(path.join(privateDir,'orders.sqlite'));
 db.exec(`PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, request_key TEXT UNIQUE, request_hash TEXT, token_hash TEXT UNIQUE, payload TEXT, square_request TEXT, square_order TEXT, payment_url TEXT, amount INTEGER, status TEXT, created_at TEXT, payment_id TEXT);`);
 let settings={enabled:false,rules:{}};try{settings=JSON.parse(fs.readFileSync(path.join(__dirname,'checkout-config.json'),'utf8'));}catch{}
 const origin=process.env.PUBLIC_ORIGIN||'',squareMode=process.env.SQUARE_ENVIRONMENT||'sandbox';
-const ready=!!(settings.enabled&&process.env.OWNER_PASSWORD?.length>=20&&process.env.SQUARE_ACCESS_TOKEN&&process.env.SQUARE_LOCATION_ID&&process.env.SQUARE_WEBHOOK_SIGNATURE_KEY&&/^https:\/\//.test(origin)&&process.env.SQUARE_WEBHOOK_URL===origin+'/api/square-webhook');
+const ready=!!(settings.enabled&&(!settings.sandboxOnly||squareMode==='sandbox')&&process.env.OWNER_PASSWORD?.length>=20&&process.env.SQUARE_ACCESS_TOKEN&&process.env.SQUARE_LOCATION_ID&&process.env.SQUARE_WEBHOOK_SIGNATURE_KEY&&/^https:\/\//.test(origin)&&process.env.SQUARE_WEBHOOK_URL===origin+'/api/square-webhook');
 const squareBase=squareMode==='production'?'https://connect.squareup.com':'https://connect.squareupsandbox.com';
 const hash=x=>crypto.createHash('sha256').update(x).digest('hex');
 const money=amount=>({amount,currency:'USD'});
