@@ -79,7 +79,12 @@ async function webhook(req,res,raw){
 function ownerAllowed(req){
  const password=process.env.OWNER_PASSWORD;if(!password||password.length<20)return false;
  const given=String(req.headers.authorization||'');const expected='Basic '+Buffer.from('owner:'+password).toString('base64');
- return crypto.timingSafeEqual(Buffer.from(hash(given)),Buffer.from(hash(expected)));
+ if(crypto.timingSafeEqual(Buffer.from(hash(given)),Buffer.from(hash(expected))))return true;
+ const cookie=/^rv_owner=(\d{13})\.([a-f0-9]{64})$/.exec((req.headers.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith('rv_owner='))||'');
+ if(!cookie)return false;
+ const issued=Number(cookie[1]);if(issued>Date.now()||Date.now()-issued>12*60*60*1000)return false;
+ const expectedCookie=crypto.createHmac('sha256',password).update('owner-session-v1:'+cookie[1]).digest('hex');
+ return crypto.timingSafeEqual(Buffer.from(cookie[2]),Buffer.from(expectedCookie));
 }
 const escape=x=>String(x??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function ownerPage(content){return '<!doctype html><html lang="en"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>ReVizionedIt orders</title><style>body{font:16px/1.5 Arial;background:#171116;color:#fff;margin:0;padding:32px}main{max-width:1100px;margin:auto}h1,h2,a{color:#ff91c6}article{border:1px solid #ff72b8;padding:24px;border-radius:16px;margin:20px 0}pre{white-space:pre-wrap;overflow-wrap:anywhere;font:inherit}img{max-width:180px;max-height:180px;margin:10px;border-radius:12px}table{width:100%;border-collapse:collapse}td,th{text-align:left;border-bottom:1px solid #73445f;padding:12px}small{color:#dec7d3}</style><main>'+content+'</main></html>';}
@@ -88,9 +93,23 @@ const server=http.createServer(async(req,res)=>{
  res.setHeader('X-Content-Type-Options','nosniff');res.setHeader('Referrer-Policy','no-referrer');res.setHeader('X-Frame-Options','DENY');
  try{
  const url=new URL(req.url,'http://localhost');
+ if(url.pathname==='/owner/login'){
+  if(req.method==='POST'){
+   const raw=await body(req,4096),form=new URLSearchParams(raw.toString('utf8'));
+   const candidate=String(form.get('password')||''),secret=process.env.OWNER_PASSWORD||'';
+   const good=secret.length>=20&&crypto.timingSafeEqual(Buffer.from(hash(candidate)),Buffer.from(hash(secret)));
+   if(!good){res.writeHead(303,{Location:'/owner/login?error=1','Cache-Control':'no-store'});return res.end();}
+   const issued=String(Date.now()),token=crypto.createHmac('sha256',secret).update('owner-session-v1:'+issued).digest('hex');
+   res.writeHead(303,{Location:'/owner','Set-Cookie':`rv_owner=${issued}.${token}; Max-Age=43200; HttpOnly; Secure; SameSite=Strict; Path=/owner`,'Cache-Control':'no-store'});return res.end();
+  }
+  if(req.method!=='GET')return send(res,405,{error:'Method not allowed'});
+  const error=url.searchParams.has('error')?'<p role="alert">Password did not match. Copy the OWNER_PASSWORD value from Render and try again.</p>':'';
+  res.writeHead(200,{'Content-Type':'text/html; charset=utf-8','Cache-Control':'no-store','Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; form-action 'self'; frame-ancestors 'none'"});
+  return res.end(ownerPage('<h1>Owner sign in</h1>'+error+'<form action="/owner/login" method="post"><label>Password <input type="password" name="password" autocomplete="current-password" required></label> <button type="submit">Sign in</button></form>'));
+ }
  if(url.pathname==='/owner'||url.pathname.startsWith('/owner/')){
   if(req.method!=='GET')return send(res,405,{error:'Method not allowed'});
-  if(!ownerAllowed(req)){res.writeHead(401,{'WWW-Authenticate':'Basic realm="ReVizionedIt owner", charset="UTF-8"','Cache-Control':'no-store'});return res.end('Owner sign-in required.');}
+  if(!ownerAllowed(req)){res.writeHead(303,{Location:'/owner/login','Cache-Control':'no-store'});return res.end();}
   const parts=url.pathname.split('/').filter(Boolean);let html;
   if(parts.length===1){
    const orders=db.prepare('SELECT id,status,created_at,amount,payload FROM orders ORDER BY created_at DESC LIMIT 200').all();
