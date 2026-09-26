@@ -1,4 +1,8 @@
 {
-  "enabled": false,
-  "rules": {}
+  "enabled": true,
+  "sandboxOnly": true,
+  "rules": {
+    "pickup:springfield": {"percentage": 0, "shippingTaxable": false, "rushTaxable": false},
+    "pickup:chicago": {"percentage": 0, "shippingTaxable": false, "rushTaxable": false}
+  }
 }
