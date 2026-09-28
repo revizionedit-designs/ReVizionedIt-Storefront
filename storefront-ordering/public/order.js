@@ -14,7 +14,7 @@ function readDetails(){
  state.accepted=$('#policy-accept').checked;
 }
 function selectedLine(){return {id:uid(),product:$('#product').value,quantity:Number($('#set-quantity').value),size:Number($('#set-size')?.value),cupType:$('#cup-type')?.value,choice:$('#close-choice')?.value,picks:$$('[name=favor-pick]:checked').map(x=>x.value)};}
-function selectionPrice(){try{$('#selection-price').textContent=M.money(M.priceLine(selectedLine()).total);}catch{$('#selection-price').textContent=$('#product').value==='custom'?'Pick your favors':'—';}}
+function selectionPrice(){try{const line=selectedLine();const standalone=M.priceLine(line);const withPackage=line.product==='gameboard'&&state.lines.some(x=>M.catalog[x.product]?.package);$('#selection-price').textContent=M.money(withPackage?6000*line.quantity:standalone.total);}catch{$('#selection-price').textContent=$('#product').value==='custom'?'Pick your favors':'—';}}
 function selectProduct(id){$('#product').value=id;const p=M.catalog[id];$('#product-description').textContent=p.description;let html='';
  if(p.prices)html+='<label for="set-size">Pieces per set</label><select id="set-size">'+Object.entries(p.prices).map(([n,price])=>`<option value="${n}">${n} pieces · ${M.money(price)}</option>`).join('')+'</select>';
  if(id==='cups')html+='<label for="cup-type" style="margin-top:16px">Cup style</label><select id="cup-type"><option>Foam</option><option>Plastic</option></select>';
@@ -23,10 +23,11 @@ function selectProduct(id){$('#product').value=id;const p=M.catalog[id];$('#prod
  $('#product-options').innerHTML=html;$('#set-quantity').value=1;selectionPrice();
 }
 function renderBag(){readDetails();let q;try{q=M.quote(state);}catch(e){if(state.event.date){try{q=M.quote({...state,event:{}});}catch{}}}
- $('#bag-items').innerHTML=state.lines.length?state.lines.map((line,i)=>{const p=M.priceLine(line);return `<div class="bag-item"><strong>${esc(p.name)} × ${p.quantity}</strong><p>${esc(p.detail||M.catalog[line.product].description)}</p><div class="bag-row"><span>${M.money(p.total)}</span><button type="button" class="order-text-button" data-remove="${i}" aria-label="Remove ${esc(p.name)}">Remove</button></div></div>`;}).join(''):'<p class="order-muted">Your next celebration starts here. Add your first favorite.</p>';
+ $('#bag-items').innerHTML=state.lines.length?state.lines.map((line,i)=>{const p=q?.lines[i]||M.priceLine(line);return `<div class="bag-item"><strong>${esc(p.name)} × ${p.quantity}</strong><p>${esc(p.detail||M.catalog[line.product].description)}</p><div class="bag-row"><span>${M.money(p.total)}</span><button type="button" class="order-text-button" data-remove="${i}" aria-label="Remove ${esc(p.name)}">Remove</button></div></div>`;}).join(''):'<p class="order-muted">Your next celebration starts here. Add your first favorite.</p>';
  if(q){$('#bag-totals').innerHTML=q.addons.map(x=>`<div class="bag-row"><span>${esc(x.name)} × ${x.quantity}</span><span>${M.money(x.total)}</span></div>`).join('')+`<div class="bag-row"><span>Items</span><span>${M.money(q.subtotal)}</span></div><div class="bag-row"><span>${state.fulfillment==='shipping'?'Shipping':'Pickup'}</span><span>${M.money(q.shipping)}</span></div>`+(q.rush?`<div class="bag-row"><span>Rush fee</span><span>${M.money(q.rush)}</span></div>`:'')+`<div class="bag-row bag-total"><span>Before tax</span><span>${M.money(q.total)}</span></div>`;}else $('#bag-totals').innerHTML='';
  const hasPackage=state.lines.some(x=>M.catalog[x.product].package);
  $$('#addon-inputs input').forEach(x=>{x.disabled=!hasPackage;if(!hasPackage){x.value=0;state.addons[x.dataset.addon]=0;}});
+ selectionPrice();
  if(state.event.date){try{$('#rush-note').hidden=!(M.daysUntil(state.event.date)<14&&M.daysUntil(state.event.date)>0);}catch{$('#rush-note').hidden=true;}}
 }
 function detailsValid(){readDetails();if(!$('#step-1').reportValidity())return false;try{M.validate({...state,accepted:true});return true;}catch(e){error(e.message);return false;}}

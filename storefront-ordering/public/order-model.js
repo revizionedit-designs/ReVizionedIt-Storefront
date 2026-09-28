@@ -6,6 +6,7 @@ const catalog={
  celebrity:{name:'Celebrity',price:12500,package:true,description:'1 custom bucket and 10 each of foam cups, plastic cups, party hats, shot glasses, and custom fans.'},
  cups:{name:'Cups only',prices:{8:2500,10:3500,12:4200,14:6500,20:7000},description:'Choose foam or plastic cups and your set size.'},
  shots:{name:'Shot glasses only',prices:{8:5000,10:6600,12:8000,14:9600,20:11200},description:'Custom shot glasses in your event theme.'},
+ gameboard:{name:'Custom game board',price:6500,description:'Personalized game board with game pieces, dice, and an instruction card. $65 alone or $60 with a package.'},
  custom:{name:'Create Your Own',package:true,description:'Pick 1–10 favor types. $60 per pick, with 12 of each item unless otherwise stated.'}
 };
 const picks=['Party hats','Chip bags','Rice Krispies','Ring Pops','Cheez-Its','Pringles','Capri Sun','Fruit snacks','Cups','Custom plates','Coloring books','Bubbles','Goodie bags','Water bottles'];
@@ -31,7 +32,13 @@ function priceLine(line){
 }
 function quote(order,now=new Date()){
  if(!order||!Array.isArray(order.lines)||!order.lines.length||order.lines.length>30)throw Error('Add at least one item to your order.');
- const lines=order.lines.map(priceLine),extra=[];const hasPackage=lines.some(x=>x.package);
+ const hasPackage=order.lines.some(x=>catalog[x?.product]?.package);
+ const lines=order.lines.map(line=>{
+  const priced=priceLine(line);
+  if(line.product==='gameboard'&&hasPackage)return {...priced,unit:6000,total:6000*priced.quantity,detail:'With game pieces, dice, and instruction card · package price'};
+  return priced;
+ });
+ const extra=[];
  for(const [key,qty] of Object.entries(order.addons||{})){
   if(!Object.hasOwn(addons,key)||!Number.isInteger(qty)||qty<0||qty>100)throw Error('Choose a valid add-on quantity.');
   if(qty){if(!hasPackage)throw Error('Add-ons require a package order.');extra.push({name:addons[key].name,quantity:qty,unit:addons[key].price,total:qty*addons[key].price});}
