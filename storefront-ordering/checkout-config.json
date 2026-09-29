@@ -1,8 +1,10 @@
 {
   "enabled": true,
-  "sandboxOnly": true,
+  "sandboxOnly": false,
   "rules": {
-    "pickup:springfield": {"percentage": 0, "shippingTaxable": false, "rushTaxable": false},
-    "pickup:chicago": {"percentage": 0, "shippingTaxable": false, "rushTaxable": false}
+    "pickup:springfield": {"percentage": 10.25, "shippingTaxable": false, "rushTaxable": false},
+    "pickup:chicago": {"percentage": 10.5, "shippingTaxable": false, "rushTaxable": false},
+    "shipping:IL": {"percentage": 10.25, "shippingTaxable": false, "rushTaxable": false},
+    "shipping:US-OTHER": {"percentage": 0, "shippingTaxable": false, "rushTaxable": false}
   }
 }

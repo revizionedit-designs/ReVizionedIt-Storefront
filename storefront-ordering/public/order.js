@@ -46,7 +46,7 @@ function setDelivery(){const shipping=$('input[name=fulfillment]:checked').value
 function photos(){const el=$('#photo-previews');el.innerHTML='';state.photos.forEach((photo,i)=>{const box=document.createElement('div');box.className='order-photo';const img=document.createElement('img');img.src=photo.data;img.alt=photo.name;const button=document.createElement('button');button.type='button';button.textContent='Remove';button.setAttribute('aria-label','Remove '+photo.name);button.onclick=()=>{state.photos.splice(i,1);dirty();photos();};box.append(img,button);el.append(box);});}
 $('#product').innerHTML=Object.entries(M.catalog).map(([id,p])=>`<option value="${id}">${esc(p.name)}</option>`).join('');
 $('#addon-inputs').innerHTML=Object.entries(M.addons).map(([id,p])=>`<div class="order-addon"><label for="addon-${id}">${esc(p.name)}<span>${M.money(p.price)} each</span></label><input id="addon-${id}" data-addon="${id}" type="number" value="0" min="0" max="100" disabled aria-label="${esc(p.name)} quantity"></div>`).join('');
-$('#address-state').insertAdjacentHTML('beforeend','AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY'.split(' ').map(x=>`<option>${x}</option>`).join(''));
+$('#address-state').insertAdjacentHTML('beforeend',M.states.map(x=>`<option>${x}</option>`).join(''));
 const tomorrow=new Date(M.dayInChicago()+'T12:00:00Z');tomorrow.setUTCDate(tomorrow.getUTCDate()+1);$('#event-date').min=tomorrow.toISOString().slice(0,10);
 selectProduct('basic');renderBag();
 $$('[data-product],[data-order-open]').forEach(x=>x.addEventListener('click',ev=>{ev.preventDefault();open(x.dataset.product,x);}));

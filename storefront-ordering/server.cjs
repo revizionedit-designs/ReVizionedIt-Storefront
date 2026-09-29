@@ -9,7 +9,7 @@ const db=new DatabaseSync(path.join(privateDir,'orders.sqlite'));
 db.exec(`PRAGMA journal_mode=WAL; CREATE TABLE IF NOT EXISTS orders (id TEXT PRIMARY KEY, request_key TEXT UNIQUE, request_hash TEXT, token_hash TEXT UNIQUE, payload TEXT, square_request TEXT, square_order TEXT, payment_url TEXT, amount INTEGER, status TEXT, created_at TEXT, payment_id TEXT);`);
 let settings={enabled:false,rules:{}};try{settings=JSON.parse(fs.readFileSync(path.join(__dirname,'checkout-config.json'),'utf8'));}catch{}
 const origin=process.env.PUBLIC_ORIGIN||'',squareMode=process.env.SQUARE_ENVIRONMENT||'sandbox';
-const ready=!!(settings.enabled&&(!settings.sandboxOnly||squareMode==='sandbox')&&process.env.OWNER_PASSWORD?.length>=20&&process.env.SQUARE_ACCESS_TOKEN&&process.env.SQUARE_LOCATION_ID&&process.env.SQUARE_WEBHOOK_SIGNATURE_KEY&&/^https:\/\//.test(origin)&&process.env.SQUARE_WEBHOOK_URL===origin+'/api/square-webhook');
+const ready=!!(settings.enabled&&(!settings.sandboxOnly||squareMode==='sandbox')&&(squareMode!=='production'||process.env.ORDER_DATA_DIR)&&process.env.OWNER_PASSWORD?.length>=20&&process.env.SQUARE_ACCESS_TOKEN&&process.env.SQUARE_LOCATION_ID&&process.env.SQUARE_WEBHOOK_SIGNATURE_KEY&&/^https:\/\//.test(origin)&&process.env.SQUARE_WEBHOOK_URL===origin+'/api/square-webhook');
 const squareBase=squareMode==='production'?'https://connect.squareup.com':'https://connect.squareupsandbox.com';
 const hash=x=>crypto.createHash('sha256').update(x).digest('hex');
 const money=amount=>({amount,currency:'USD'});
@@ -24,7 +24,7 @@ function cleanPhotos(photos){return photos.map((p,i)=>{
  if(!valid)throw Error('A photo could not be verified. Please choose another file.');
  return {name:p.name,filename:`photo-${i+1}.${match[1].split('/')[1]}`,type:match[1],bytes};
  });}
-function taxFor(order){const key=order.fulfillment==='shipping'?`shipping:${order.address.state}:${order.address.zip.slice(0,5)}`:`pickup:${order.fulfillment}`;const rule=settings.rules?.[key];if(!rule||!Number.isFinite(rule.percentage)||rule.percentage<0||rule.percentage>20||typeof rule.shippingTaxable!=='boolean'||typeof rule.rushTaxable!=='boolean')throw Error('Online checkout is not available for this delivery location yet. Please contact Orders@revizioneditdesigns.com.');return rule;}
+function taxFor(order){const keys=order.fulfillment==='shipping'?[`shipping:${order.address.state}:${order.address.zip.slice(0,5)}`,`shipping:${order.address.state}`,...(order.address.state==='IL'?[]:['shipping:US-OTHER'])]:[`pickup:${order.fulfillment}`];const rule=keys.map(k=>settings.rules?.[k]).find(Boolean);if(!rule||!Number.isFinite(rule.percentage)||rule.percentage<0||rule.percentage>20||typeof rule.shippingTaxable!=='boolean'||typeof rule.rushTaxable!=='boolean')throw Error('Online checkout is not available for this delivery location yet. Please contact Orders@revizioneditdesigns.com.');return rule;}
 function makeSquareRequest(id,token,order,q,rule){
  const tax=rule.percentage>0?[{uid:'sales-tax',name:'Sales tax',percentage:String(rule.percentage),scope:'LINE_ITEM',type:'ADDITIVE'}]:[];
  const entry=(name,quantity,amount,note,taxable=true)=>({name,quantity:String(quantity),base_price_money:money(amount),note:note||undefined,...(tax.length&&taxable?{applied_taxes:[{tax_uid:'sales-tax'}]}:{})});
@@ -139,4 +139,4 @@ const server=http.createServer(async(req,res)=>{
  }catch(e){console.error('Request failed:',e.message);send(res,e.status||400,{error:e instanceof SyntaxError?'The order could not be read. Please try again.':e.message||'Please try again.'});}
 });
 if(require.main===module)server.listen(Number(process.env.PORT||8787),process.env.HOST||'0.0.0.0',()=>console.log('Storefront listening on port '+(process.env.PORT||8787)));
-module.exports={server,makeSquareRequest,paymentVerified,cleanPhotos};
+module.exports={server,taxFor,makeSquareRequest,paymentVerified,cleanPhotos};

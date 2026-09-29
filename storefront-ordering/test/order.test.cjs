@@ -19,4 +19,9 @@ test('game board is $65 alone and $60 per board with a package regardless of ite
 });
 test('rejects arbitrary prices, invalid quantities, and standalone add-ons',()=>{assert.equal(M.priceLine({product:'basic',quantity:1,price:1}).total,6500);assert.throws(()=>M.priceLine({product:'basic',quantity:-1}));assert.throws(()=>M.quote({...order(),lines:[{product:'cups',size:8,cupType:'Foam',quantity:1}]}));});
 test('blocks invalid dates and incomplete orders',()=>{assert.throws(()=>M.quote({...order(),event:{date:'2026-02-30'}},now));assert.throws(()=>M.validate({...order(),accepted:false},now));assert.throws(()=>M.validate({...order(),contact:{name:'M',email:'wrong',phone:'2175550123'}},now));assert.throws(()=>M.validate({...order(),fulfillment:'shipping'},now));});
+test('shipping requires a listed US state and ZIP',()=>{
+ const o={...order(),fulfillment:'shipping',address:{line1:'123 Main St',city:'Springfield',state:'IL',zip:'62703'}};
+ assert.equal(M.validate(o,now).shipping,2000);
+ assert.throws(()=>M.validate({...o,address:{...o.address,state:'ZZ'}},now));
+});
 test('allows valid completed order',()=>assert.equal(M.validate(order(),now).total,8100));

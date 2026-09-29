@@ -10,6 +10,7 @@ const catalog={
  custom:{name:'Create Your Own',package:true,description:'Pick 1–10 favor types. $60 per pick, with 12 of each item unless otherwise stated.'}
 };
 const picks=['Party hats','Chip bags','Rice Krispies','Ring Pops','Cheez-Its','Pringles','Capri Sun','Fruit snacks','Cups','Custom plates','Coloring books','Bubbles','Goodie bags','Water bottles'];
+const states='AL AK AZ AR CA CO CT DE DC FL GA HI ID IL IN IA KS KY LA ME MD MA MI MN MS MO MT NE NV NH NJ NM NY NC ND OH OK OR PA RI SC SD TN TX UT VT VA WA WV WI WY'.split(' ');
 const addons={buttons:{name:'Custom buttons',price:300},cups:{name:'Cups',price:300},fans:{name:'Custom fans',price:800},shots:{name:'Shot glasses',price:800},hats:{name:'Custom party hats',price:1500},bucket:{name:'Custom bucket',price:1500},shirt:{name:'Custom shirt',price:2500},board:{name:'Custom board',price:3000}};
 const money=n=>new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(n/100);
 function dayInChicago(now=new Date()){return new Intl.DateTimeFormat('en-CA',{timeZone:'America/Chicago',year:'numeric',month:'2-digit',day:'2-digit'}).format(now);}
@@ -54,13 +55,13 @@ function validate(order,now=new Date()){
  required(e.date,'your event date');daysUntil(e.date,now);required(e.name,'the event name');required(e.colors,'your colors');required(e.theme,'your theme or freestyle request');
  required(c.name,'your name');required(c.email,'your email');if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(c.email))throw Error('Enter a valid email.');required(c.phone,'your phone number');if(c.phone.replace(/\D/g,'').length<10)throw Error('Enter a valid phone number.');
  if(!['shipping','springfield','chicago'].includes(order.fulfillment))throw Error('Choose shipping or pickup.');
- if(order.fulfillment==='shipping'){for(const k of ['line1','city','state','zip'])required(order.address?.[k],'your shipping '+k);if(!/^[A-Z]{2}$/.test(order.address.state)||!/^\d{5}(-\d{4})?$/.test(order.address.zip))throw Error('Enter a valid US state and ZIP code.');}
+ if(order.fulfillment==='shipping'){for(const k of ['line1','city','state','zip'])required(order.address?.[k],'your shipping '+k);if(!states.includes(order.address.state)||!/^\d{5}(-\d{4})?$/.test(order.address.zip))throw Error('Enter a valid US state and ZIP code.');}
  if(order.addons?.shirt>0&&!(e.notes||'').trim())throw Error('Please add shirt sizes and quantities in the extra instructions.');
  if(order.accepted!==true)throw Error('Please agree to the order policy.');
  for(const v of [e.notes,e.age,e.zodiac])if(v!==undefined&&(typeof v!=='string'||v.length>2000))throw Error('Please shorten your event details.');
  if(!Array.isArray(order.photos)||order.photos.length>4)throw Error('Choose up to four photos.');
  return q;
 }
-const api={catalog,picks,addons,money,dayInChicago,daysUntil,priceLine,quote,validate};
+const api={catalog,picks,states,addons,money,dayInChicago,daysUntil,priceLine,quote,validate};
 if(typeof module!=='undefined'&&module.exports)module.exports=api;else root.OrderModel=api;
 })(globalThis);
